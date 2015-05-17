@@ -3,25 +3,33 @@
 #include <string.h>
 #include <signal.h>
 #include <time.h>
+#include <unistd.h>
 
-int check_updates(const char*, const struct stat *);
+#include <ftw.h>
+
+int check_updates(const char*, const struct stat *, int);
 int send_file_to_socket(const char*);
+int send_dir_to_socket(const char*);
 void exit_signal_handler(int);
 int error(char *);
 
-int check_updates;
 
-time_t last_update_time;
-char *start_path = ".";
+time_t last_update_time; // default 1970.. 
+char *start_path = "./";
 int is_working;
 
-time_t 
+
 
 int
 main(int argc, char *argv[])
 {	
-	/* Read from file last_update_time*/
-	last_update_time = 0;  // it should be from .data file
+	/* Read from file last_update_time */
+	/*xif this was a first start! */
+
+
+	/* Mayby will be exported to library*/
+	// TODO: if this is not first start read last_update_time from file!
+
 	/*Prepare to exit */
 	
 	// TODO: AteXIT fun!
@@ -34,45 +42,62 @@ main(int argc, char *argv[])
 	// Opening socket etc.
 
 
-
+	int i =0;
 	is_working = 1;
 	while(is_working)
-	{
-
-		ftw(path, visit_ftw, );
-		last_update_time = 
-		sleep(5); // now a few seconds but it  will be about five minutes!		
+	{	
+		printf("\n\n Iteration: %d\n", i++);
+		ftw(start_path, check_updates, 16);
+		
+		/* Update time*/
+		time(&last_update_time);
+		
+		sleep(10); // now a few seconds but it  will be about five minutes!		
 	}
 
 }
 
 
-int check_updates(const char *path, const stuct stat *info, int type)
+int check_updates(const char *path, const struct stat *info, int type)
 {	
+	if(strcmp(path, ".") == 0 || strcmp(path, "..")== 0)
+			return 0;
+
 	/* Check and send file if it was modified after last update */
-	if(type == FTW_F && difftime(info.st_mtime, last_update_time) >= 0))
+	if(type == FTW_F && difftime(info->st_mtime, last_update_time) >= 0)
 	{		
 		if(send_file_to_socket(path) < 0)
 		{
 			error("Error sending file!");
 		}
-	}			
-	return 1;	
+	} else if(type == FTW_D)
+		if(send_dir_to_socket(path) < 0)
+		{
+			error("Error sending file!");
+		}
+	
+	return 0;	
 }
 
-/** Sends file to socket opened in main! */
+/** Sends file to socket opened in main!
+	Returns 1 if ok else -1 */
 int send_file_to_socket(const char* path)
 {
 	printf("Sending file: \t %s\n", path);
 	return 1;
 }
 
+int send_dir_to_socket(const char* path)
+{
+	printf("Sending dir: \t %s\n", path);
+	return 1;
+}
 
 
 void exit_signal_handler(int signum)
 {
-	printf("Exiting\n");
-	exit(EXIT_SUCCESS):
+	printf("\n\nExiting\n");
+	exit(EXIT_SUCCESS);
 }
 
 
