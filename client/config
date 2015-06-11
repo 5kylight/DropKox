@@ -1,0 +1,5 @@
+start path=./test
+port=9000
+address=localhost
+delay time=3
+
