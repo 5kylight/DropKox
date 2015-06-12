@@ -4,7 +4,7 @@ LFLAGS =
 
 OBJS = main.o 
 
-all:clean server 
+all:server 
 
 server : main.c
 	$(CC) $(CFLAGS) -o $@ $^ -L../lib -ldrop
