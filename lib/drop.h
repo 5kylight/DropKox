@@ -6,9 +6,10 @@
 #define TIME_FORMAT "%F %T"
 #define h_addr h_addr_list[0] 
 #define _GNU_SOURCE
-#define MAX_BACKUPS 5
+#define MAX_BACKUPS 2
 #define OLD_FILE ".old"
 #define BUFF_SIZE 1024
+#define FILE_DIFF 1
 
 #include <netdb.h>
 #include <netinet/in.h>
@@ -24,6 +25,8 @@
 #include <sys/sendfile.h>
 #include <time.h>
 #include <unistd.h>
+#include <ftw.h>
+#include <poll.h>
 
 enum msg_type{NEW_FILE, DELETE_FILE, NEW_DIR, PULL_REQUEST, DISCONNECT, E};
 
@@ -38,7 +41,7 @@ struct message
 {
 	enum msg_type type;
 	struct file_info file;
-	time_t time;	
+	time_t last_update_time;	
 };
 
 

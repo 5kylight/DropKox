@@ -19,17 +19,16 @@ int receive_file_from_socket(int socket, const char *file_path, struct file_info
 	int size = 1;
 	int output = open(file_path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IRGRP  );
 
-	printf("File size %d \n", (int) info.file_size );
+	printf("\tFile size %d \n", (int) info.file_size );
 	int buff_size;
-	while (received  < (int) info.file_size - 1) {
+	while (received  < (int) info.file_size) {
 		buff_size = (info.file_size - received) > BUFF_SIZE ? BUFF_SIZE : info.file_size - received;
 		size = recv(socket, buff, buff_size, 0);
 		received += size;
-		printf("\t---- Receiving: %d%%\n", (int) received * 100 / (int) info.file_size);
+		printf("\t\t---- Receiving: %d%%\n", (int) received * 100 / (int) info.file_size);
 		write(output, buff, size);
 	}
 
-	printf("Recived file:   \t %s\n", file_path);
 	close(output);
 	return 0;
 }
@@ -46,42 +45,33 @@ int deal_with_old_file(const char* file_path)
 	strcat(tmp, OLD_FILE);
 
 	int i = 0;
-	// struct stat st;
 	while (!access(tmp, F_OK) && i < MAX_BACKUPS)
 	{
 		strcat(tmp, OLD_FILE);
 		i++;
 	}
-
+	
 	/* To much copies */
 	if (i == MAX_BACKUPS) {
+		memset(tmp + strlen(tmp) - strlen(OLD_FILE), 0, strlen(OLD_FILE));
 		if (remove(tmp) < 0)
 			error("cannot remove this file");
-	} else {
-		strcat(tmp, OLD_FILE);
 	}
 
-	char *new_name = calloc(strlen(file_path) + (i - 1) * 4, sizeof(char));
-	strncpy(new_name, tmp, strlen(tmp - strlen(OLD_FILE)));
+	char *old_name = calloc(strlen(tmp), sizeof(char));
+	strncpy(old_name, tmp, strlen(tmp) - strlen(OLD_FILE));
 	
 	while (strcmp(tmp, file_path)) {
-		printf("%s\n", tmp);
-		printf("%s\n", new_name);
-
-		if (rename(tmp, new_name) < 0)
+		if (rename(old_name, tmp) < 0)
 			error("rename");
 
-		strncpy(tmp, tmp, strlen(tmp - strlen(OLD_FILE)));
-		strncpy(new_name, tmp, strlen(tmp - strlen(OLD_FILE)));
+		strcpy(tmp, old_name);
+		memset(old_name, 0, strlen(old_name));
+		strncpy(old_name, tmp, strlen(tmp) - strlen(OLD_FILE));
 	}
 
-	rename(new_name, tmp);
-	remove(new_name);
-	
-
 	free(tmp);
-	free(new_name);
-
+	free(old_name);
 	return 1;
 }
 
@@ -124,8 +114,6 @@ int send_file_to_socket(int socket, const char* path, const char* main_path, con
     	return -1;
     }
   
-    printf("File sent: \t %s \n", normalized_name);
-	
 	free(normalized_name);
 	return 1;
 }
@@ -148,7 +136,6 @@ int send_dir_to_socket(int socket, const char* path, const char* main_path, cons
 	if (send(socket, &message, sizeof(message), 0) < 0)
 		perror("send dir");
 
-	printf("Sent dir: \t %s\n", normalized_name);
 	
 	free(normalized_name);
 	return 1;
