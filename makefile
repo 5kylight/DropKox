@@ -1,15 +1,12 @@
-CC = gcc
-CFLAGS = -Wall -g -std=c99
-LFLAGS = -lrt 
 
-OBJS = ./server/main.c 
+server:
+	$(MAKE) -C ./server al
+client:
+	$(MAKE) -C ./client all
 
-all:$(OBJS)
-
-%.o : %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-	$(CC) $@ -o $* $(LFLAGS)
+.PHONY: clean server client
+clean:
+	$(MAKE) -C ./client clean
+	$(MAKE) -C ./server clean
 
 .PHONY : clean
-clean :
-	rm -f five_philosophers.o five_philosophers
