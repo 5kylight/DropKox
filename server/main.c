@@ -1,17 +1,21 @@
 #include "../lib/drop.h"
 
 void configure_data();
-
-time_t last_update_time;
+void disconnect_clients();
 
 /* Rememeber to create this*/
 char backup_main_path[100] = "./data/";
 char confing_file_path[100] = "./config";
 
+time_t last_client_push;
 int is_working = 1;
 int server_socket;
 int delay_time = 10;
 int port = PORT; 
+int current_socket;
+time_t current_time;
+fd_set set;
+int fd_hwm;
 
 int main(int argc, char *argv[])
 {	
@@ -37,10 +41,10 @@ int main(int argc, char *argv[])
 		error("listen inet");
 
 	/* FD set */
-	fd_set set, read_set;
+	fd_set read_set;
 	FD_ZERO(&set);
 	FD_SET(server_socket, &set);
-	int fd_hwm = server_socket;
+	fd_hwm = server_socket;
 
 	struct message message;
 	int new_client;
@@ -67,10 +71,18 @@ int main(int argc, char *argv[])
 					strcat(normalized_name, file_name);
 					
 					if (message.type == NEW_FILE) {	
+						time(&last_client_push);
 						receive_file_from_socket(fd, normalized_name, message.file);
+					
 					} else if(message.type == NEW_DIR) {
+						time(&last_client_push);
 						receive_dir_from_socket(fd, normalized_name, message.file);
+					
 					} else if(message.type == PULL_REQUEST) {
+						current_socket = fd;
+						current_time = message.last_update_time;
+						if (difftime(last_client_push, current_time) > FILE_DIFF);
+							ftw(backup_main_path, check_updates, 16);
 
 					} else if(message.type == DISCONNECT) {
 						FD_CLR(fd, &set);
@@ -144,6 +156,41 @@ void match_val(char *what, char* val)
 		port = atoi(val);
 }
 
+int check_updates(const char *path, const struct stat *info, int type)
+{	
+	if(strcmp(path, ".") == 0 
+		|| strcmp(path, "..") == 0 
+		|| strcmp(path, backup_main_path) == 0)
+			return 0;	
+
+	if(strstr(path, OLD_FILE) != NULL)
+		return 0;
+
+	/* Check and send file if it was modified after last update */
+	if(type == FTW_F && difftime(info -> st_mtime, current_time) > FILE_DIFF) {		
+		if(send_file_to_socket(current_socket, path, backup_main_path, info) < 0) {
+			error("Error sending file!");
+		}
+	} else if(type == FTW_D && difftime(info -> st_mtime, current_time) > FILE_DIFF) {
+		if(send_dir_to_socket(current_socket, path, backup_main_path, info) < 0) {
+			error("Error sending file!");
+		}
+	}
+
+	return 0;	
+}
+
+void disconnect_clients()
+{		
+	struct message message;
+	message.type = DISCONNECT;
+
+	for (int fd = 0; fd <= fd_hwm; fd++) 
+		if(FD_ISSET(fd, &set))
+			if (send(fd, &message, sizeof(message),	0) < 0)
+				error("sendmsg");		
+
+}
 
 void before_exit()
 {	
@@ -157,13 +204,4 @@ void exit_signal_handler(int signum)
 }
 
 
-void disconnect()
-{
-	struct message message;
-	message.msg_type = DISCONNECT;
-	if (send(client_socket, 
-					&message, 
-					sizeof(message), 
-					0) < 0)
-				error("sendmsg");		
-}
+
