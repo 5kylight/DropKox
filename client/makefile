@@ -7,4 +7,4 @@ all: client
 client: main.c 
 	$(CC) $(CFLAGS) -o $@ $^ -L../lib -ldrop
 clean:
-	rm client 
+	rm client client.data
