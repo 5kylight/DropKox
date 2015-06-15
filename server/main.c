@@ -73,11 +73,13 @@ int main(int argc, char *argv[])
 					if (message.type == NEW_FILE) {	
 						time(&last_client_push);
 						receive_file_from_socket(fd, normalized_name, message.file);
+						confirm_received(fd);
 					
 					} else if(message.type == NEW_DIR) {
 						time(&last_client_push);
 						receive_dir_from_socket(fd, normalized_name, message.file);
-					
+						confirm_received(fd);
+
 					} else if(message.type == PULL_REQUEST) {
 						current_socket = fd;
 						current_time = message.last_update_time;
@@ -86,7 +88,7 @@ int main(int argc, char *argv[])
 
 					} else if(message.type == DISCONNECT) {
 						FD_CLR(fd, &set);
-					}
+					} 
 					free(normalized_name);
 					message.type = E;
 				}
@@ -148,8 +150,11 @@ void configure_data()
 void match_val(char *what, char* val)
 {	
 	printf("Setting %s with %s\n", what, val);
-	if (!strcmp(what, "backup start path"))
+	if (!strcmp(what, "backup start path")) {
 		strcpy(backup_main_path, val);
+		if(create_backup_dir(val))
+			error("bad start path");
+	}
 	else if (!strcmp(what, "delay time"))
 		delay_time = atoi(val);
 	else if (!strcmp(what, "port"))
