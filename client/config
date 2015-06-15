@@ -1,4 +1,4 @@
 start path=./test
 port=9001
-address=localhost
-delay time=3
+address=gandalf.icsr.agh.edu.pl
+delay time=60

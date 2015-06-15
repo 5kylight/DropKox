@@ -8,6 +8,7 @@ void configure_data(int, char **);
 void save_data();
 void send_pull_request();
 void *receiver_thread(void *);
+void update_sync_time();
 
 time_t last_update_time = 0; // default 1970.. 
 time_t last_server_synchronization = 0;
@@ -137,11 +138,22 @@ void configure_data(int argc, char *argv[])
 	printf("\n== Configuration finished ==\n\n");
 }
 
+void update_sync_time()
+{
+	pthread_mutex_unlock(&lock);
+	time(&last_server_synchronization);
+	pthread_mutex_unlock(&lock);	
+}
+
+
 void match_val(char *what, char* val)
 {	
 	printf("Setting %s with %s\n", what, val);
-	if (!strcmp(what, "start path"))
+	if (!strcmp(what, "start path")) {
 		strcpy(start_path, val);
+		if (create_backup_dir(val))
+			error("Bad start path");
+	}
 	else if (!strcmp(what, "delay time"))
 		delay_time = atoi(val);
 	else if (!strcmp(what, "address"))
@@ -208,15 +220,16 @@ void *receiver_thread(void *unused)
 
 			if (message.type == NEW_FILE) {
 				receive_file_from_socket(server_socket, normalized_name, message.file);
+				update_sync_time();
 			} else if(message.type == NEW_DIR) {
 				receive_dir_from_socket(server_socket, normalized_name, message.file);
+				update_sync_time();
 			} else if(message.type == DISCONNECT) {
 				is_working = 0;
 				exit(EXIT_SUCCESS);
-			}	
-			pthread_mutex_unlock(&lock);
-			time(&last_server_synchronization);
-			pthread_mutex_unlock(&lock);
+			} else if(message.type == CONF) {
+				update_sync_time();
+			}
 		}
 	}
 	return NULL;
