@@ -28,7 +28,7 @@
 #include <ftw.h>
 #include <poll.h>
 
-enum msg_type{NEW_FILE, DELETE_FILE, NEW_DIR, PULL_REQUEST, DISCONNECT, E};
+enum msg_type{NEW_FILE, DELETE_FILE, NEW_DIR, PULL_REQUEST, DISCONNECT, E, CONF};
 
 struct file_info
 {
@@ -44,7 +44,8 @@ struct message
 	time_t last_update_time;	
 };
 
-
+int create_backup_dir(char *);
+int confirm_received(int);
 int send_file_to_socket(int, const char *, const char *, const struct stat *);
 int send_dir_to_socket(int , const char *, const char *, const struct stat *);
 int receive_file_from_socket(int, const char *, struct file_info);

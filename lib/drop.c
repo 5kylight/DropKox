@@ -138,7 +138,7 @@ int send_dir_to_socket(int socket, const char* path, const char* main_path, cons
 
 	
 	free(normalized_name);
-	return 1;
+	return 0;
 }
 
 int receive_dir_from_socket(int socket, const char *path, const struct file_info info)
@@ -146,13 +146,61 @@ int receive_dir_from_socket(int socket, const char *path, const struct file_info
 	printf("Receiving dir: \t %s\n", path);
 
 	if(!access(path, F_OK))
-	return 0;
+		return 0;
 
 	if (mkdir(path, info.permissions) < 0)
 		error("mkdir");
 
 	printf("Received dir:  \t %s\n", path);
-	return 1;
+	return 0;
+}
+
+int confirm_received(int socket)
+{
+	struct message message;
+
+	message.type = CONF;
+
+	if (send(socket, 
+					&message, 
+					sizeof(message), 
+					0) < 0)
+				error("sendmsg");	
+
+	return 0;
+}
+
+int create_backup_dir(char *path)
+{
+	if(!access(path, F_OK))
+		return 0;
+
+	int size = strlen(path);
+	char *buff = calloc(size, sizeof(char));
+	char c = '/';
+	int i = 0;
+
+	int perm = S_IRGRP | S_IRWXU | S_IROTH | S_IWOTH; 
+
+	while(i < size) {
+		
+		while(i < size && c != path[i]) {
+			buff[i] = path[i];
+			i++;
+		}
+
+		buff[i] = path[i];
+		++i;
+
+		if (strcmp(buff, "./") && strcmp(buff, "."))
+			if (access(path, F_OK) && mkdir(buff, perm)) {
+				perror("mkdir");
+				return -1;
+			}
+	}
+
+	free(buff);
+	return 0;
 }
 
 int error(char *error_info)
